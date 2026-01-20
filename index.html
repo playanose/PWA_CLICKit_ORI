@@ -3,40 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#0a0a0a">
     <title>CLICK IT</title>
-    <link rel="manifest" href="manifest.json">
     <style>
-        :root { --click-blue: #4285F4; --surface: #121212; --accent: #FFD700; }
+        :root { 
+            --click-blue: #4285F4; 
+            --surface: #0a0a0a; 
+            /* Latest Spectrum/Icon Gradient */
+            --spectrum: conic-gradient(from 180deg, #ff0055, #ffdd00, #00ffaa, #00aaff, #ff0055);
+        }
+        
         body { margin: 0; background: #000; color: white; font-family: 'Roboto', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        #viewport { position: relative; flex-grow: 1; overflow: hidden; border-radius: 0 0 24px 24px; background: #000; }
-        video { width: 100%; height: 100%; object-fit: cover; transition: filter 0.4s ease; }
+        /* Viewfinder with rounded corners */
+        #viewport { position: relative; flex-grow: 1; overflow: hidden; border-radius: 0 0 32px 32px; background: #000; margin: 0 4px; }
+        video { width: 100%; height: 100%; object-fit: cover; }
 
-        #flash-overlay { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 2000; transition: opacity 0.05s; }
+        /* FLASH EFFECT (from Film-MonoCam-PWA) */
+        #flash-overlay { 
+            position: fixed; inset: 0; background: white; opacity: 0; 
+            pointer-events: none; z-index: 6000; transition: opacity 0.05s ease-out; 
+        }
 
-        .style-scroller { display: flex; gap: 20px; padding: 15px 20px; overflow-x: auto; scrollbar-width: none; background: linear-gradient(transparent, rgba(0,0,0,0.6)); }
+        /* Style Controls */
+        .style-scroller { display: flex; gap: 20px; padding: 20px; overflow-x: auto; scrollbar-width: none; background: var(--surface); }
         .style-scroller::-webkit-scrollbar { display: none; }
-        .style-btn { min-width: 90px; font-size: 11px; font-weight: 800; color: #555; text-transform: uppercase; text-align: center; transition: 0.2s; cursor: pointer; white-space: nowrap; }
-        .style-active { color: var(--accent); transform: scale(1.1); }
+        .style-btn { min-width: 80px; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; text-align: center; cursor: pointer; transition: 0.3s; }
+        .style-active { color: #fff; transform: scale(1.1); }
+        .style-active::after { content: ''; display: block; height: 2px; background: var(--spectrum); margin-top: 4px; border-radius: 2px; }
 
-        .bottom-bar { background: var(--surface); padding-bottom: env(safe-area-inset-bottom); display: flex; flex-direction: column; align-items: center; }
-        .shutter-row { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 30px 0; }
+        /* Bottom UI */
+        .bottom-bar { background: var(--surface); padding-bottom: env(safe-area-inset-bottom); }
+        .shutter-row { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 20px 0 35px 0; }
         
-        #preview-thumb { width: 52px; height: 52px; border-radius: 50%; background: #222; border: 1px solid rgba(255,255,255,0.1); background-size: cover; background-position: center; }
-        #shutter { width: 82px; height: 82px; border-radius: 50%; border: 4px solid white; background: transparent; padding: 5px; outline: none; }
-        #shutter-btn { width: 100%; height: 100%; border-radius: 50%; background: white; }
-        #switch-btn { width: 52px; height: 52px; border-radius: 50%; background: rgba(255,255,255,0.1); border: none; color: white; font-size: 24px; }
+        #preview-thumb { width: 54px; height: 54px; border-radius: 12px; background: #1a1a1a; border: 2px solid #333; background-size: cover; background-position: center; cursor: pointer; }
+        
+        /* Shutter with Icon Colors */
+        #shutter { 
+            width: 88px; height: 88px; border-radius: 50%; padding: 4px; background: var(--spectrum); 
+            border: none; display: flex; align-items: center; justify-content: center; 
+            animation: rotateSpectrum 5s linear infinite; outline: none;
+        }
+        @keyframes rotateSpectrum { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        #shutter-inner { width: 100%; height: 100%; border-radius: 50%; background: white; border: 4px solid var(--surface); animation: counterRotate 5s linear infinite; }
+        @keyframes counterRotate { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+        #shutter:active #shutter-inner { transform: scale(0.9); }
 
+        /* Gallery System */
+        #gallery-view { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
+        #gallery-img { flex-grow: 1; width: 100%; object-fit: contain; }
+        .gallery-nav { padding: 30px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); }
+        .close-btn { color: white; background: none; border: 2px solid white; padding: 10px 20px; border-radius: 20px; font-weight: bold; }
+
+        /* Launch Screen */
         #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #btn-snap-launch { background: var(--click-blue); color: white; border: none; padding: 18px 80px; border-radius: 40px; font-weight: 900; font-size: 24px; letter-spacing: 4px; }
+        .brand-text { font-size: 60px; font-weight: 900; letter-spacing: -3px; margin-bottom: 30px; }
+        .spectrum-text { background: var(--spectrum); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #btn-snap-launch { background: white; color: black; border: none; padding: 16px 60px; border-radius: 12px; font-weight: 900; font-size: 18px; }
     </style>
 </head>
 <body>
 
 <div id="flash-overlay"></div>
+
+<div id="gallery-view">
+    <img id="gallery-img" src="">
+    <div class="gallery-nav">
+        <button class="close-btn" onclick="closeGallery()">BACK</button>
+        <span style="font-size: 10px; color: #555;">SENSOR NATIVE 90% JPG</span>
+        <button id="dl-current" class="close-btn" style="border-color: var(--click-blue); color: var(--click-blue);">SAVE</button>
+    </div>
+</div>
+
 <div id="overlay">
-    <h1 style="letter-spacing:-4px; font-size: 70px; margin-bottom: 40px;">CLICK <span style="color:var(--click-blue)">IT</span></h1>
-    <button id="btn-snap-launch">CLICK</button>
+    <div class="brand-text">CLICK <span class="spectrum-text">IT</span></div>
+    <button id="btn-snap-launch">START SENSOR</button>
 </div>
 
 <div id="viewport">
@@ -46,17 +88,15 @@
 <div class="style-scroller">
     <span class="style-btn style-active" onclick="applyStyle(this, 'none')">Natural</span>
     <span class="style-btn" onclick="applyStyle(this, 'saturate(1.2) sepia(0.15) contrast(1.1)')">Portra</span>
-    <span class="style-btn" onclick="applyStyle(this, 'grayscale(1) contrast(1.6) brightness(1.05)')">MONO</span>
-    <span class="style-btn" onclick="applyStyle(this, 'contrast(1.5) saturate(2) hue-rotate(-10deg) brightness(0.9)')">LOMO</span>
-    <span class="style-btn" onclick="applyStyle(this, 'sepia(0.4) brightness(1.1) contrast(0.9)')">Retro</span>
-    <span class="style-btn" onclick="applyStyle(this, 'contrast(1.4) saturate(1.6) brightness(0.95) hue-rotate(-2deg)')">Positive Film</span>
+    <span class="style-btn" onclick="applyStyle(this, 'grayscale(1) contrast(1.6) brightness(1.1)')">Mono</span>
+    <span class="style-btn" onclick="applyStyle(this, 'contrast(1.4) saturate(1.8) hue-rotate(-10deg)')">Lomo</span>
 </div>
 
 <div class="bottom-bar">
     <div class="shutter-row">
-        <div id="preview-thumb"></div>
-        <button id="shutter"><div id="shutter-btn"></div></button>
-        <button id="switch-btn" onclick="switchCamera()">🔄</button>
+        <div id="preview-thumb" onclick="openGallery()"></div>
+        <button id="shutter"><div id="shutter-inner"></div></button>
+        <button onclick="switchCamera()" style="width: 54px; height: 54px; border-radius: 50%; background: #1a1a1a; border: none; color: white; font-size: 20px;">🔄</button>
     </div>
 </div>
 
@@ -66,68 +106,74 @@
     const v = document.querySelector('#v');
     const thumb = document.querySelector('#preview-thumb');
     const flash = document.querySelector('#flash-overlay');
+    const galView = document.querySelector('#gallery-view');
+    const galImg = document.querySelector('#gallery-img');
     let isFront = false;
-    let currentStyleName = 'Natural';
+    let lastImgData = null;
 
     document.querySelector('#btn-snap-launch').onclick = () => initCam();
 
     async function initCam() {
-        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: isFront ? "user" : "environment", width: { ideal: 3840 } } });
-        v.srcObject = s;
-        document.querySelector('#overlay').style.display = 'none';
+        if (v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
+        try {
+            const s = await navigator.mediaDevices.getUserMedia({ 
+                video: { 
+                    facingMode: isFront ? "user" : "environment", 
+                    width: { ideal: 7680 }, // FULL SENSOR SIZE logic
+                    height: { ideal: 4320 },
+                    frameRate: { ideal: 60 } 
+                } 
+            });
+            v.srcObject = s;
+            document.querySelector('#overlay').style.display = 'none';
+        } catch (e) { alert("Please allow camera access."); }
     }
 
+    function switchCamera() { isFront = !isFront; initCam(); }
+    
     function applyStyle(el, filterValue) {
-        currentStyleName = el.innerText;
         document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('style-active'));
         el.classList.add('style-active');
         v.style.filter = filterValue === 'none' ? '' : filterValue;
     }
 
-    function switchCamera() { isFront = !isFront; initCam(); }
+    function openGallery() { if(lastImgData){ galImg.src = lastImgData; galView.style.display = 'flex'; } }
+    function closeGallery() { galView.style.display = 'none'; }
 
     document.querySelector('#shutter').onclick = async () => {
+        // FLASH EFFECT (from Film-MonoCam-PWA)
         flash.style.opacity = "1";
+        setTimeout(() => flash.style.opacity = "0", 100);
+        
         if (navigator.vibrate) navigator.vibrate(50);
         
-        setTimeout(async () => {
-            const canvas = document.querySelector('#c');
-            const ctx = canvas.getContext('2d');
-            canvas.width = v.videoWidth;
-            canvas.height = v.videoHeight;
-            
-            if (isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
-            
-            ctx.filter = v.style.filter;
-            ctx.drawImage(v, 0, 0);
+        const canvas = document.querySelector('#c');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        
+        // FULL SENSOR SIZE mapping
+        const sensorW = v.videoWidth;
+        const sensorH = v.videoHeight;
+        canvas.width = sensorW;
+        canvas.height = sensorH;
+        
+        ctx.save();
+        if (isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
+        ctx.filter = v.style.filter;
+        ctx.drawImage(v, 0, 0, sensorW, sensorH);
+        ctx.restore();
 
-            // Add Random Light Leak if LOMO is active
-            if (currentStyleName === 'LOMO') {
-                const colors = ['rgba(255,0,0,0.3)', 'rgba(255,165,0,0.3)', 'rgba(255,255,0,0.2)', 'rgba(0,0,255,0.2)'];
-                const randomColor = colors[Math.floor(Math.random() * colors.length)];
-                
-                const grad = ctx.createRadialGradient(
-                    Math.random() * canvas.width, Math.random() * canvas.height, 0,
-                    Math.random() * canvas.width, Math.random() * canvas.height, canvas.width
-                );
-                grad.addColorStop(0, randomColor);
-                grad.addColorStop(1, 'transparent');
-                
-                ctx.globalCompositeOperation = 'screen';
-                ctx.fillStyle = grad;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                ctx.globalCompositeOperation = 'source-over';
-            }
-
-            const img = canvas.toDataURL('image/jpeg', 0.95);
-            thumb.style.backgroundImage = `url(${img})`;
-            const link = document.createElement('a');
-            link.href = img;
-            link.download = `CLICKIT_${Date.now()}.jpg`;
-            link.click();
-            
-            flash.style.opacity = "0";
-        }, 80);
+        // 90% QUALITY EXPORT
+        const img = canvas.toDataURL('image/jpeg', 0.90);
+        lastImgData = img;
+        thumb.style.backgroundImage = `url(${img})`;
+        
+        // Download Link
+        const link = document.createElement('a');
+        link.href = img;
+        link.download = `CLICKIT_SENSOR_${Date.now()}.jpg`;
+        link.click();
+        
+        document.getElementById('dl-current').onclick = () => link.click();
     };
 </script>
 </body>
