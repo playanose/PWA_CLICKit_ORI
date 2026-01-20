@@ -8,95 +8,69 @@
     <title>CLICK IT</title>
     <style>
         :root { 
-            --click-blue: #4285F4; 
             --surface: #0a0a0a; 
-            /* Latest Spectrum/Icon Gradient */
             --spectrum: conic-gradient(from 180deg, #ff0055, #ffdd00, #00ffaa, #00aaff, #ff0055);
         }
         
-        body { margin: 0; background: #000; color: white; font-family: 'Roboto', sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+        body { margin: 0; background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* Viewfinder with rounded corners */
         #viewport { position: relative; flex-grow: 1; overflow: hidden; border-radius: 0 0 32px 32px; background: #000; margin: 0 4px; }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* FLASH EFFECT (from Film-MonoCam-PWA) */
-        #flash-overlay { 
-            position: fixed; inset: 0; background: white; opacity: 0; 
-            pointer-events: none; z-index: 6000; transition: opacity 0.05s ease-out; 
-        }
+        /* Flash & Light Leak Overlays */
+        #flash { position: fixed; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 9999; }
+        #leak-overlay { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0.6; display: none; }
 
-        /* Style Controls */
-        .style-scroller { display: flex; gap: 20px; padding: 20px; overflow-x: auto; scrollbar-width: none; background: var(--surface); }
-        .style-scroller::-webkit-scrollbar { display: none; }
-        .style-btn { min-width: 80px; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; text-align: center; cursor: pointer; transition: 0.3s; }
-        .style-active { color: #fff; transform: scale(1.1); }
-        .style-active::after { content: ''; display: block; height: 2px; background: var(--spectrum); margin-top: 4px; border-radius: 2px; }
+        .scroller { display: flex; gap: 20px; padding: 20px; overflow-x: auto; scrollbar-width: none; background: var(--surface); }
+        .s-btn { min-width: 80px; font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; text-align: center; cursor: pointer; }
+        .active { color: #fff; }
+        .active::after { content: ''; display: block; height: 2px; background: var(--spectrum); margin-top: 4px; }
 
-        /* Bottom UI */
-        .bottom-bar { background: var(--surface); padding-bottom: env(safe-area-inset-bottom); }
-        .shutter-row { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 20px 0 35px 0; }
+        .controls { background: var(--surface); padding-bottom: env(safe-area-inset-bottom); }
+        .shutter-box { width: 100%; display: flex; justify-content: space-around; align-items: center; padding: 20px 0 35px 0; }
         
-        #preview-thumb { width: 54px; height: 54px; border-radius: 12px; background: #1a1a1a; border: 2px solid #333; background-size: cover; background-position: center; cursor: pointer; }
+        #thumb { width: 54px; height: 54px; border-radius: 12px; background: #1a1a1a; border: 2px solid #333; background-size: cover; background-position: center; }
         
-        /* Shutter with Icon Colors */
         #shutter { 
             width: 88px; height: 88px; border-radius: 50%; padding: 4px; background: var(--spectrum); 
             border: none; display: flex; align-items: center; justify-content: center; 
-            animation: rotateSpectrum 5s linear infinite; outline: none;
+            animation: spin 6s linear infinite; outline: none;
         }
-        @keyframes rotateSpectrum { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        #shutter-inner { width: 100%; height: 100%; border-radius: 50%; background: white; border: 4px solid var(--surface); animation: counterRotate 5s linear infinite; }
-        @keyframes counterRotate { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
-        #shutter:active #shutter-inner { transform: scale(0.9); }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        #shutter-in { width: 100%; height: 100%; border-radius: 50%; background: white; border: 4px solid var(--surface); }
 
-        /* Gallery System */
-        #gallery-view { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; flex-direction: column; }
-        #gallery-img { flex-grow: 1; width: 100%; object-fit: contain; }
-        .gallery-nav { padding: 30px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.8); }
-        .close-btn { color: white; background: none; border: 2px solid white; padding: 10px 20px; border-radius: 20px; font-weight: bold; }
-
-        /* Launch Screen */
-        #overlay { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .brand-text { font-size: 60px; font-weight: 900; letter-spacing: -3px; margin-bottom: 30px; }
-        .spectrum-text { background: var(--spectrum); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        #btn-snap-launch { background: white; color: black; border: none; padding: 16px 60px; border-radius: 12px; font-weight: 900; font-size: 18px; }
+        #splash { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .logo { font-size: 60px; font-weight: 900; letter-spacing: -3px; margin-bottom: 30px; }
+        .logo span { background: var(--spectrum); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        #start { background: white; color: black; border: none; padding: 16px 60px; border-radius: 14px; font-weight: 900; font-size: 18px; }
     </style>
 </head>
 <body>
 
-<div id="flash-overlay"></div>
+<div id="flash"></div>
 
-<div id="gallery-view">
-    <img id="gallery-img" src="">
-    <div class="gallery-nav">
-        <button class="close-btn" onclick="closeGallery()">BACK</button>
-        <span style="font-size: 10px; color: #555;">SENSOR NATIVE 90% JPG</span>
-        <button id="dl-current" class="close-btn" style="border-color: var(--click-blue); color: var(--click-blue);">SAVE</button>
-    </div>
-</div>
-
-<div id="overlay">
-    <div class="brand-text">CLICK <span class="spectrum-text">IT</span></div>
-    <button id="btn-snap-launch">START SENSOR</button>
+<div id="splash">
+    <div class="logo">CLICK <span>IT</span></div>
+    <button id="start">START SENSOR</button>
 </div>
 
 <div id="viewport">
     <video id="v" autoplay playsinline></video>
+    <canvas id="leak-overlay"></canvas>
 </div>
 
-<div class="style-scroller">
-    <span class="style-btn style-active" onclick="applyStyle(this, 'none')">Natural</span>
-    <span class="style-btn" onclick="applyStyle(this, 'saturate(1.2) sepia(0.15) contrast(1.1)')">Portra</span>
-    <span class="style-btn" onclick="applyStyle(this, 'grayscale(1) contrast(1.6) brightness(1.1)')">Mono</span>
-    <span class="style-btn" onclick="applyStyle(this, 'contrast(1.4) saturate(1.8) hue-rotate(-10deg)')">Lomo</span>
+<div class="scroller">
+    <span class="s-btn active" onclick="setStyle(this, 'none')">Natural</span>
+    <span class="s-btn" onclick="setStyle(this, 'contrast(1.4) saturate(1.8) hue-rotate(-10deg) brightness(0.9)')">LOMO</span>
+    <span class="s-btn" onclick="setStyle(this, 'grayscale(1) contrast(1.6)')">MONO</span>
+    <span class="s-btn" onclick="setStyle(this, 'sepia(0.5) contrast(1.2)')">VINTAGE</span>
 </div>
 
-<div class="bottom-bar">
-    <div class="shutter-row">
-        <div id="preview-thumb" onclick="openGallery()"></div>
-        <button id="shutter"><div id="shutter-inner"></div></button>
-        <button onclick="switchCamera()" style="width: 54px; height: 54px; border-radius: 50%; background: #1a1a1a; border: none; color: white; font-size: 20px;">🔄</button>
+<div class="controls">
+    <div class="shutter-box">
+        <div id="thumb"></div>
+        <button id="shutter"><div id="shutter-in"></div></button>
+        <button onclick="flip()" style="background:none; border:none; color:white; font-size:24px;">🔄</button>
     </div>
 </div>
 
@@ -104,76 +78,64 @@
 
 <script>
     const v = document.querySelector('#v');
-    const thumb = document.querySelector('#preview-thumb');
-    const flash = document.querySelector('#flash-overlay');
-    const galView = document.querySelector('#gallery-view');
-    const galImg = document.querySelector('#gallery-img');
+    const thumb = document.querySelector('#thumb');
+    const flash = document.querySelector('#flash');
+    const splash = document.querySelector('#splash');
     let isFront = false;
-    let lastImgData = null;
 
-    document.querySelector('#btn-snap-launch').onclick = () => initCam();
+    document.querySelector('#start').onclick = () => init();
 
-    async function initCam() {
-        if (v.srcObject) v.srcObject.getTracks().forEach(t => t.stop());
-        try {
-            const s = await navigator.mediaDevices.getUserMedia({ 
-                video: { 
-                    facingMode: isFront ? "user" : "environment", 
-                    width: { ideal: 7680 }, // FULL SENSOR SIZE logic
-                    height: { ideal: 4320 },
-                    frameRate: { ideal: 60 } 
-                } 
-            });
-            v.srcObject = s;
-            document.querySelector('#overlay').style.display = 'none';
-        } catch (e) { alert("Please allow camera access."); }
+    async function init() {
+        const s = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: isFront ? "user" : "environment", width: { ideal: 4000 }, height: { ideal: 3000 } } 
+        });
+        v.srcObject = s;
+        splash.style.display = 'none';
     }
 
-    function switchCamera() { isFront = !isFront; initCam(); }
+    function flip() { isFront = !isFront; init(); }
     
-    function applyStyle(el, filterValue) {
-        document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('style-active'));
-        el.classList.add('style-active');
-        v.style.filter = filterValue === 'none' ? '' : filterValue;
+    function setStyle(el, f) {
+        document.querySelectorAll('.s-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        v.style.filter = f === 'none' ? '' : f;
     }
 
-    function openGallery() { if(lastImgData){ galImg.src = lastImgData; galView.style.display = 'flex'; } }
-    function closeGallery() { galView.style.display = 'none'; }
+    function drawRandomLeak(ctx, w, h) {
+        const colors = ['rgba(255, 50, 0, 0.4)', 'rgba(255, 150, 0, 0.3)', 'rgba(255, 0, 100, 0.3)'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const grad = ctx.createRadialGradient(Math.random()*w, Math.random()*h, 0, Math.random()*w, Math.random()*h, w*0.8);
+        grad.addColorStop(0, color);
+        grad.addColorStop(1, 'transparent');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+    }
 
     document.querySelector('#shutter').onclick = async () => {
-        // FLASH EFFECT (from Film-MonoCam-PWA)
         flash.style.opacity = "1";
         setTimeout(() => flash.style.opacity = "0", 100);
         
-        if (navigator.vibrate) navigator.vibrate(50);
-        
         const canvas = document.querySelector('#c');
-        const ctx = canvas.getContext('2d', { alpha: false });
-        
-        // FULL SENSOR SIZE mapping
-        const sensorW = v.videoWidth;
-        const sensorH = v.videoHeight;
-        canvas.width = sensorW;
-        canvas.height = sensorH;
+        const ctx = canvas.getContext('2d');
+        canvas.width = v.videoWidth;
+        canvas.height = v.videoHeight;
         
         ctx.save();
         if (isFront) { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
         ctx.filter = v.style.filter;
-        ctx.drawImage(v, 0, 0, sensorW, sensorH);
+        ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+        
+        // Apply Random Light Leak to the saved image
+        drawRandomLeak(ctx, canvas.width, canvas.height);
         ctx.restore();
 
-        // 90% QUALITY EXPORT
-        const img = canvas.toDataURL('image/jpeg', 0.90);
-        lastImgData = img;
-        thumb.style.backgroundImage = `url(${img})`;
+        const data = canvas.toDataURL('image/jpeg', 0.90);
+        thumb.style.backgroundImage = `url(${data})`;
         
-        // Download Link
-        const link = document.createElement('a');
-        link.href = img;
-        link.download = `CLICKIT_SENSOR_${Date.now()}.jpg`;
-        link.click();
-        
-        document.getElementById('dl-current').onclick = () => link.click();
+        const a = document.createElement('a');
+        a.href = data;
+        a.download = `CLICKIT_LOMO_${Date.now()}.jpg`;
+        a.click();
     };
 </script>
 </body>
